@@ -102,30 +102,58 @@ edges = mias_edges
 for pair in list(edges.keys()):
     edges[pair[1] + pair[0]] = edges[pair]
 
+# save the edges as a csv
+with open("edges.csv", "w") as f:
+    f.write("edge,distance\n")
+    for pair, distance in edges.items():
+        f.write(f"{pair},{distance:.2f}\n")
 
-def length(path: str) -> float:
-    total = 0
-    for i in range(len(path) - 1):
-        edge = path[i : i + 2]
-        if edge not in edges:
-            # the path is not valid, return a large number
-            return 10e10
-        total += edges[edge]
-    return total
+
+# define our distance function
+def distance(path: list[str]) -> float:
+    return sum([edges[path[i] + path[i + 1]] for i in range(len(path) - 1)])
 
 
 count = 0
 shortest = 10e10
 best = ""
 
+# brute force all paths
 for p in permutations("BCDEFGHI"):
     count += 1
-    trip = "A" + "".join(p) + "A"
-    distance = length(trip)
-    if distance < shortest:
-        shortest = distance
+    trip = ["A"] + list(p) + ["A"]
+    d = distance(trip)
+    if d < shortest:
+        shortest = d
         best = trip
-    print(trip, length(trip))
 
-print("\nTotal paths checked:", count)
-print("Best path:", best, "with length", shortest)
+print(f"Brute forced {count} paths.  Best path is {best} with length {shortest:.2f}")
+
+
+def nn(path: list[str], unvisited: set[str], depth: int = 2) -> str:
+    min_distance = 10e10
+    best: str = ""
+    if len(unvisited) == 1:
+        return next(iter(unvisited))
+    to_check = permutations(unvisited, min(depth, len(unvisited)))
+    if len(unvisited) < depth:
+        to_check = [list(o) + ["A"] for o in to_check]
+
+    for option in to_check:
+        d = distance(path + list(option))
+        if d < min_distance:
+            min_distance = d
+            best = option[0]
+    return best
+
+
+for d in range(1, 9):
+    unvisited = set(["B", "C", "D", "E", "F", "G", "H", "I"])
+    path = ["A"]
+    while len(unvisited) > 0:
+        best = nn(path, unvisited, depth=d)
+        path = path + [best]
+        unvisited.remove(best)
+
+    path.append("A")
+    print(f"Depth {d}: best path is {''.join(path)} with length {distance(path):.2f}")
